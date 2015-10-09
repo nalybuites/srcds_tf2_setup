@@ -1,0 +1,108 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          tf2-sserver
+# Required-Start:    $remote-fs
+# Required-Stop:     $remote-fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Team Fortress 2 Server
+# Description:       Starts a Team Fortress 2 Server
+### END INIT INFO
+
+NAME="Team Fortress 2"
+USER="srcds"
+SCREEN_REF="tf2"
+SRCDS_PATH="/opt/srcds"
+STEAM_CMD_PATH="/opt/srcds/hlserver"
+STEAM_CMD_NAME="steamcmd.sh"
+STEAM_SCRIPT_PATH="/opt/srcds/scripts"
+STEAM_SCRIPT_NAME="tf2_update.steamcmd"
+BINARY_PATH="/opt/srcds/hlserver/tf2"
+BINARY_NAME="srcds_run"
+PID_FILE="/var/run/tf2_server.pid"
+
+OPTS="-game tf +sv_pure 1 +randommap +maxplayers 32 +ip 0.0.0.0 -autoupdate +mapcyclefile $BINARY_PATH/tf/cfg/mapcycle.txt -replay -steam_dir $SRCDS_PATH/hlserver -steamcmd_script $SRCDS_PATH/scripts/tf2_update.steamcmd +sv_shutdown_timeout_minutes 5"
+
+running() {
+	if [ -n "`pgrep -f $BINARY_NAME`" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+start() {
+	if ! running; then
+		echo -n "Starting the $NAME server..."
+		start-stop-daemon --start --chuid $USER --chdir $BINARY_PATH --exec "/usr/bin/screen" -- -dmS $SCREEN_REF $BINARY_PATH/$BINARY_NAME $OPTS
+		sleep 5
+		pgrep -f $BINARY_NAME > $PID_FILE
+		if [ -s $PID_FILE ]; then
+			echo "Done"
+		else
+			echo "Failed"
+			rm $PID_FILE
+		fi
+	else
+		echo "The $NAME server is already started"
+	fi
+}
+
+stop() {
+	if running; then
+		echo -n "Stopping the $NAME server..."
+		kill `cat $PID_FILE`
+		while running; do
+			sleep 1
+		done
+		rm $PID_FILE
+		echo "Done"
+	else
+		echo "The $NAME server is already stopped"
+	fi
+}
+
+update() {
+	$STEAM_CMD_PATH/$STEAM_CMD_NAME +runscript $STEAM_SCRIPT_PATH/$STEAM_SCRIPT_NAME;
+}
+
+case "$1" in
+	start)
+		start
+		;;
+		
+	stop)
+		stop
+		;;
+	
+	restart)
+		stop
+		start
+		;;
+	
+	status)
+		if running; then
+			echo "The $NAME server is started"
+		else
+			echo "The $NAME server is stopped"
+		fi
+		;;
+	
+	update-restart)
+		stop
+		update
+		start
+		;;
+	
+	update)
+		stop
+		update
+		;;
+	
+	*)
+		echo "Usage: $0 (start|stop|restart|status|update|update-restart)"
+		exit 1
+esac
+
+exit 0
+

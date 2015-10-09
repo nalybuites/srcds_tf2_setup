@@ -1,0 +1,7 @@
+@ShutdownOnFailedCommand 1
+@NoPromptForPassword 1
+login anonymous
+force_install_dir /opt/srcds/hlserver/tf2
+app_update 232250
+quit
+
